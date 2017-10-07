@@ -1,0 +1,40 @@
+
+
+body {
+	background-color: lightblue;
+}
+
+.content{
+	width: 75%;
+	background-color: white;
+	margin-left: auto;
+	margin-right: auto;
+	padding: 20px;
+	
+}
+
+.code {
+	margin: 10px;
+	font-family: monospace;
+	background-color: lightgrey;
+	padding: 15px;
+	overflow: scroll;
+	max-width: 90%;
+	max-height: 300px;
+}
+
+li {
+	margin-bottom: 5px;
+}
+
+pre {
+	display: inline-block;
+}
+
+img {
+	max-width: 100%;
+	border: 1px solid #021a40;
+	margin-top: 10px;
+	margin-bottom: 10px;
+	display: block;
+}

@@ -1,0 +1,470 @@
+
+<article class="content">
+	<h1>Writing a Library for a Chatbox API (Howard Jed Chen)</h1>
+	<section class="introduction">
+		<h2> Introduction to the Chatbox API </h1>
+		<p>
+			The <a href="https://www.olark.com/api"> Olark Chatbox API </a> was made to be a simple way to add a chatbox to your website.
+			If anyone wants to chat with your service team, they type into the chatbox,
+			and anyone who is logged into the corresponding Olark account can respond if they're
+			available.
+		</p>
+		<p>
+			Installation of Olark is very simple. All you need to do is copy and paste a few
+			lines of JavaScript into your website's html file, and voila! You can have a
+			chatbox on even the most skeletal of sites, like
+			<a href="http://flip1.engr.oregonstate.edu:4432/example_1"> this one</a>. <br>
+			
+			<a href="https://www.olark.com/help/guide">Installation Guide 1</a> <br>
+			<a href="https://www.olark.com/help/html">Installation Guide 2</a> <br>
+			<a href="https://www.olark.com/api"> JavaScript API </a> <br><br>
+			
+			The code that I had to copy-and-paste into my HTML files looked like the following:
+			<div class=code>
+				<!-- begin olark code -->
+&#60;script type="text/javascript" async&#62; ;(function(o,l,a,r,k,y){if(o.olark)return;
+r="script";y=l.createElement(r);r=l.getElementsByTagName(r)[0]; y.async=1;y.src=
+"//"+a;r.parentNode.insertBefore(y,r); y=o.olark=function(){k.s.push(arguments);
+k.t.push(+new Date)}; y.extend=function(i,j){y("extend",i,j)}; 
+y.identify=function(i){y("identify",k.i=i)}; y.configure=function(i,j)
+{y("configure",i,j);k.c[i]=j}; k=y._={s:[],t:[+new Date],c:{},l:a}; })
+(window,document,"static.olark.com/jsclient/loader.js"); <br> <br>
+<strong>/* custom configuration goes here (www.olark.com/documentation) */</strong> <br> <br>
+olark.identify('XXX-XX-XXX-XXX');&#60;/script&#62;
+<!-- end olark code -->
+			</div>
+			Notice the bolded text about adding custom configuration.
+			This is where all the custom JavaScript code that we write will go. It
+			is only within that space that the JavaScript is aware of the Olark Chatbox,
+			and able to interact with it.
+		</p>
+		<h3>How does the Olark Chatbox work once it's installed?</h3>
+		<p>
+			The Olark Chatbox involves interactions between two people that
+			Olark calls the "visitor" and the "operator". The visitor is the client
+			who visits the website that that has the chatbox installed. Any visitor will
+			see a chatbox like in the following image:
+			<img src="visitor.png">
+
+			But besides typing into the chatbox, there really isn't very much a visitor can do.
+			The main options available are type and respond...and type and respond.
+		</p>
+		<p>
+			Which brings us to the operator. The operator is the person the visitor is chatting with,
+			and you can only become an operator by signing up for and logging into an Olark account.
+			Once you do, if you install Olark on your website, you can log in to
+			<a href="https://chat.olark.com"> chat.olark.com </a>, and from there, you can
+			chat with the visitor.
+			<img src="operator.png">
+			
+			The operator has all the power in the conversation.
+			Olark provides the operator with various default commands that can be used to interact
+			with the visitor, from getting their approximate geographic location to blocking them
+			from the chat. A list of the default commands can be found
+			<a href="https://www.olark.com/help/commands"> here </a>. We won't explore
+			these commands very much in this article, since you may not have an Olark account.
+		</p>
+		<p>
+			Olark also provides the operator with a GUI for customizing the chatbox that the visitor
+			sees. Many aspects of the chatbox, like its
+			basic behavior and appearance, can be set from here. These preference settings are
+			quite useful and will satisfy the needs of most Olark operators. Olark also provides
+			the server with access to their <a href="https://www.olark.com/api">
+			JavaScript API </a>, which has fairly good documentation on how to call each function,
+			and what each function does. The API allows the server to configure the chatbox in
+			various ways, like changing its appearance/behavior, setting handlers for
+			events like new visitor messages and chatbox expansion, and asynchronous requests
+			to the Olark server for information about the visitor.
+		</p>
+		<p> 
+			Most of the API function calls look like one of the following:
+			<pre class="code">
+olark.configure("attribute_to_set", "value_to_set_it_to");
+olark("requested_api_function, "callback_function");
+olark("requested_api_function");
+olark("requested_api_function", "data"); </pre> <br>
+			Although all of the API function calls have some functionality, some are easier to use
+			than others. The event handlers and configuration calls are almost self-explanatory once
+			you look at the documentation.
+			So instead, in this article, we will try to accomplish two things: 1) Show how to use
+			the API calls to generate details about the visitor, and 2) show an example of using the
+			API calls to give the visitor more control over their experience.
+		</p>
+	</section>
+	
+	<section>
+		<h2> Goals </h2>
+		<p>
+			First, we will show how to create a Visitor object that holds the same information as the
+			visitor data structure in the Olark API. To create the Visitor, we will
+			read all the currently available information about the visitor from the Olark servers in
+			one asynchronous request, and store it. The visitor will contain methods for calculating several new
+			details from the existing Vistior data, as well as a method that creates a DOM structure
+			with the Visitor data that can be appended to the existing DOM. We'll also use Olark API's
+			even handlers to show and hide the Visitor data when the chatbox is expanded and minimized.
+		</p>
+		<p>
+			Second, we will demonstrate how to create a page that allows the visitor to
+			customize their chatbox. The page will include a form
+			that gives the visitor various options to set how the chatbox looks for themselves,
+			rather than rely on what the operator set for them. These changes should persist from site to
+			site on the domain. This will be demonstrated for three properties
+			of the chatbox: 1) position on the page, 2) color of the chatbox, and 3) default language.
+		</p>
+	
+	</section>
+	
+	<section>
+		<h2>Extracting and Displaying Visitor Statistics </h2>
+		<p>
+			You can see the visitor statistics page
+			<a href="http://flip1.engr.oregonstate.edu:4432/example_3"> here </a>.
+		</p>
+		<p>
+			The first step in calculating and displaying some visitor details is
+			to get much of that information from the server, and store it in a Visitor object.
+			We do so as follows:
+			<pre class="code">
+//Make an empty Visitor object
+var Visitor = {};
+
+//Call to the server to set the Visitor's properties.
+olark('api.visitor.getDetails', function(details){
+	Visitor.city = details.city;
+	Visitor.region = details.region;
+	Visitor.country = details.country;
+	Visitor.visitCount = details.visitCount;
+	Visitor.secondsSpentAcrossAllVisits =  details.secondsSpentAcrossAllVisits;
+	Visitor.ip = details.ip;
+	Visitor.operatingSystem = details.operatingSystem;
+	Visitor.browser = details.browser;
+	
+	... //more code follows
+	
+}); </pre> <br>
+		
+			This code creates an empty Visitor object and then uses the asynchronous
+			request's callback function
+			to get the visitor details and store them in new properties
+			of the Visitor object.
+		</p>
+		<p>
+			Next, we define some functions that can be used to calculate new statistics
+			from the existing statistics in the Visitor object, and we store these in the 
+			Visitor as well. Note that because the Visitor details are obtained through
+			an asynchronous request, we calculate the new statistics within the
+			asynchronous request's callback function (see above). We want to calculate the
+			new statistics AFTER the Olark server has sent us the information we need.
+			<pre class="code">
+function secondsToMinutes(seconds)
+{
+	return seconds / 60;
+}
+
+function secondsToHours(seconds)
+{
+	return seconds / 3600;
+}
+
+//Add some custom properties to the Visitor object.
+Visitor.minutesSpentAcrossAllVisits = secondsToMinutes(Visitor.secondsSpentAcrossAllVisits);
+Visitor.hoursSpentAcrossAllVisits = secondsToHours(Visitor.secondsSpentAcrossAllVisits);</pre>
+		</p>
+		<p>
+			Finally, we give the Visitor object a function called returnDisplay, which looks at
+			each property of the Visitor and uses them to create each row of a DOM table.
+			It then returns the table. This function can be called in the global scope
+			to build a Visitor table, which is then appended onto the DOM so that the visitor
+			can see his statistics/information.
+			<pre class="code">
+Visitor.returnDisplay = function() {
+	var table = document.createElement("table");
+	var caption = document.createElement("caption");
+	caption.textContent = "Visitor Information";
+	table.appendChild(caption);
+	
+	//Give table a header
+	var thead = document.createElement("thead");
+	table.appendChild(thead);
+
+	//Give header a row
+	var row = document.createElement("tr");
+	thead.appendChild(row);
+	
+	//Give header 2 header cells
+	var nameCell = document.createElement("th");
+	nameCell.textContent = "Name";
+	row.appendChild(nameCell);
+	
+	var valueCell = document.createElement("th");
+	valueCell.textContent = "Value";
+	row.appendChild(valueCell);
+	
+	//Give table a body.
+	var tbody = document.createElement("tbody");
+	table.appendChild(tbody);
+	
+	//For each property in the Visitor,
+	//create a row for the information.
+	for(var p in this)
+	{
+		if(p != "returnDisplay")
+		{
+			var bodyRow = document.createElement("tr");
+			
+			var dataCell_1 = document.createElement("td");
+			dataCell_1.textContent = p;
+			bodyRow.appendChild(dataCell_1);
+			
+			var dataCell_2 = document.createElement("td");
+			dataCell_2.textContent = this[p];
+			bodyRow.appendChild(dataCell_2);
+			
+			tbody.append(bodyRow);
+		}
+	}
+	
+	//Give the table a border.
+	table.border = "1";
+	
+	return table;
+
+};
+
+//Make the table.
+var table = Visitor.returnDisplay();
+
+//Display the table.
+var content = document.getElementById("visitor_display");
+content.appendChild(table); </pre>
+		</p>
+		<p>
+			Finally, we can create an event handler that hides the table when the chatbox
+			is expanded and shows the table when the chatbox is minimized by using the two
+			following API calls:
+			<pre class="code">
+olark('api.box.onExpand', function() {
+	var content = document.getElementById("visitor_display");
+	content.style.display = "none";
+});
+
+olark('api.box.onShrink', function() {
+	var content = document.getElementById("visitor_display");
+	content.style.display = "block";
+}); </pre> <br>
+
+			As you can see, it can be fairly simple to work with the Olark API.
+			You can find a working example of the code
+			<a href="http://flip1.engr.oregonstate.edu:4432/example_3"> here </a>.
+			Once you're done playing with it, we'll move on to creating a form that
+			allows the visitor to customize their chatbox.
+		</p>
+	
+	</section>
+	
+	
+	<section>
+		<h2> Creating a Visitor Chatbox Customization From	</h2>
+		<p>
+			To allow the visitor to customize their Chatbox experience, we have to expose the
+			API to them in a graphical way. We'll do this by writing a short form where they
+			can make choices for chatbox appearance and then submit those choices to the
+			server. You can find the completed form and chatbox
+			<a href="http://flip1.engr.oregonstate.edu:4432/example_2"> here </a> if you're impatient.
+		</p>
+		<h3> Creating the Form </h3>
+		<p>
+			To create a basic form, we use the following HTML code:
+			<pre class="code">
+&#60;section class="content"&#62;  
+	&#60;form&#62;  
+		Chatbox position:  
+		&#60;input type="radio" value="left" name="position"&#62; Left  
+		&#60;input type="radio" value="right" name="position" checked&#62; Right &#60;br&#62; &#60;br&#62;  
+		Color:  
+		&#60;input type="radio" value="red" name="color"&#62; Red  
+		&#60;input type="radio" value="blue" name="color" checked&#62; Blue  
+		&#60;input type="radio" value="yellow" name="color"&#62; Yellow &#60;br&#62; &#60;br&#62;  
+		Language:  
+		&#60;input type="radio" value="english" name="language" checked&#62; English  
+		&#60;input type="radio" value="spanish" name="language"&#62; Spanish  
+		&#60;input type="radio" value="French" name="language"&#62; French  
+		&#60;input type="radio" value="Italian" name="language"&#62; Italian  
+		&#60;input type="radio" value="German" name="language"&#62; German  
+		&#60;input type="radio" value="Chinese" name="language"&#62; Chinese &#60;br&#62;  
+		&#60;input type="submit" id="options" name="options"&#62;  
+	&#60;/form&#62;  
+&#60;/section&#62;  </pre> <br>
+			This creates a form that lets the visitor choose a radio box between left/right,
+			red/blue/yellow, and a bunch of different languages. It also provides them with
+			a submit button to click when they're ready to submit their choices.
+		</p>
+		<p>
+			At this point, everything hinges on what happens when the visitor clicks submit.
+			If everything works as intended, the submission information should be extracted and stored
+			somewhere as as part of the visitor's information
+			from one page to another. That way, every time the chatbox loads for the visitor, the chatbox
+			can be instructed to get the code from the visitor's information, and then run it, which
+			should customize the chatbox's appearance.
+		</p>
+		<h3>Experimenting and Planning to Find the Best Way to Use the Form </h3>
+		<p>
+			But how should we get the form information, and where should we store it?
+			To get the information from the form, we would ideally like to rely on JavaScript's
+			built-in event handler functions. In our form example, we would like the visitor
+			to be able to
+			click "Submit" and have their chatbox preferences be stored within the Olark API data
+			structures so that the preferences can always be retrieved. The JavaScript
+			event-handlers can definitely do this, and as we saw earlier, the Olark Chatbox
+			API has a data structure called "visitor" that can store "details" about the visitor.
+			These details can both be read and written to, and custom "details" can defined and
+			stored in the visitor. Exciting, right?
+		</p>
+		<p>
+			Unfortunately, after experimenting with the API for several hours, I came to
+			realize that (at least) for Free Olark users, there seem to be several poorly
+			documented or undocumented restrictions on how the API can be used:
+			<ol>
+				<li>
+					The first restriction is that all details stored in the visitor data structure
+					must be strings. Since JSON is not designed to store functions,
+					JavaScript functions cannot reliably be stored within the visitor,
+					so even if we use the form data to construct a function that changes the chatbox,
+					this function cannot be stored within the visitor to be used on every page.
+				</li>
+				<li>
+					The second restriction is that many Olark API calls only have effects if
+					they are called before the chatbox has been loaded. In other words, many
+					of the calls are <em>static</em>. For example, if an API call to change
+					the chatbox color is made "synchronously" in the script, the chatbox
+					color will be changed. However, if the API call is wrapped in a callback function
+					that is passed to a setTimeout() function, so that the API call is
+					delayed for 5 seconds, the API call will have no effect. The same is
+					true if the API call is within a 'click' event handler.
+				</li>
+				<li>
+					The final restriction again has to do with the visitor data structure,
+					but this time it involves what might possibly just be buggy code. Earlier
+					I mentioned that custom visitor details could be defined and stored in the
+					visitor data structure. As far as I can tell from my experiments,
+					the API calls for getting and setting these custom visitor details work well
+					in the global scope, but they often return undefined, or fail to work, when
+					used within callback functions that are passed to JavaScript built-in event
+					handlers.
+				</li>
+			</ol>
+			If I'm right, the lack of documentation on these subtle points is disappointing.
+			While the documentation
+			for what each API call does is thorough, the missing precondition documentation is 
+			misleading, making the Olark Chatbox API less intuitive and flexible than I thought.
+		</p>
+		<h3>Using Local Storage to Hold the Visitor Chatbox Preferences</h3>
+		<p>
+			While it may be possible to get around some of these problems by storing
+			the form data within the default, non-custom visitor details, it isn't the best
+			way to do it. These default visitor details have an intended purpose and they may 
+			be overwritten by the server at any point. So instead, we
+			solve our problem (as best we can) by using the browser's localStorage object. While
+			it can only store strings, it turns out that strings is all we absolutely need. We won't
+			use the string to store a function, since evaluating function-strings using
+			eval() is frowned upon as a security risk. Instead, we'll store the visitor's
+			form preferences in localStorage, and use the preferences to setup the chatbox
+			every time the page is loaded.
+		</p>
+		<h3>Coding up the Solution</h3>
+		<p>
+			Now that we understand the outline of the code we're going to write, let's begin.
+			First, we prime the website to check local storage to see if there are any
+			preferences stored that should be rendered. If any such preferences are stored
+			in the localStorage object, we pass the preference to the corresponding
+			Olark API function.
+			
+			<pre class="code">
+if(localStorage.getItem("position"))
+{
+	olark.configure('system.hb_position', localStorage.getItem("position"));
+}
+if(localStorage.getItem("color"))
+{
+	olark.configure('system.hb_primary_color', localStorage.getItem("color"));
+}
+if(localStorage.getItem("language"))
+{
+	olark.configure('system.localization', localStorage.getItem("language"));
+} </pre> </P>
+		
+		<p>	
+			Second , we give use the ID of the form's submit button to bind
+			an event handler to the submit button:
+			<pre class="code">
+function bindSubmitButton () {  
+	//processForm will be called only when the user clicks submit.  
+	document.getElementById("submit_options").addEventListener('click', processForm);  
+}
+bindSubmitButton(); </pre>
+		</p>
+		<p>
+			The function processForm will examine all the radio buttons in the HTML document,
+			and extract the values of only the checked radio boxes. These values will then
+			be put into local storage, and then the page will be reloaded to rerun the conditional
+			statements that check the values of localStorage. This will cause the
+			visitor-selected preferences to be rendered. And that pretty much completes
+			our application, which can be found
+			<a href="http://flip1.engr.oregonstate.edu:4432/example_2"> here </a>.
+			It can easily be extended to include other chatbox
+			appearance/behavioral preferences.
+			<pre class="code">
+function processForm(event) {
+	event.preventDefault();	 
+ 
+	//Get all the input radio buttons in the form. 
+	var inputs = document.getElementsByTagName("input"); 
+	  
+	var p = "left"; 
+	var c = "#00ff00"; 
+	var l = "en-US"; 
+	  
+	//If an input checkbox is checked, get its value, 
+	for (var index = 0; index < inputs.length; index++) 
+	{ 
+		if(inputs[index].checked == true) 
+		{  
+			var name = inputs[index].name; 
+			if(name == "position") 
+			{ 
+				p = inputs[index].value; 
+			}  
+			else if (name == "color")  
+			{  
+				c = inputs[index].value;  
+			}  
+			else if (name == "language")  
+			{  
+				l = inputs[index].value;  
+			}  
+			else 
+			{ 
+				console.log("Something went wrong!");  
+			} 
+		}  
+	}  
+	  
+	//Once the final position, color, and language are known,  
+	//Use them to set the appropriate values within local storage,  
+	//and then reload the page so that the preferences  
+	//can take effect.  
+	localStorage.setItem("position", p);
+	localStorage.setItem("color", c); 
+	localStorage.setItem("language", l); 
+	 
+	//Reload the page so the changes take effect.  
+	window.location.reload(false); 
+}</pre>
+		</p>
+		
+	</section>
+
+<h1>The End. Thanks for reading!</h1>
+	
+	
+</article>

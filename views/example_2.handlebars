@@ -1,0 +1,111 @@
+<section class="content">
+	<form>
+	Chatbox position:
+	<input type="radio" value="left" name="position"> Left
+	<input type="radio" value="right" name="position" checked> Right <br> <br>
+	Color:
+	<input type="radio" value="#ff0000" name="color"> Red
+	<input type="radio" value="#0000ff" name="color" checked> Blue
+	<input type="radio" value="#00ff00" name="color"> Green <br> <br>
+	Language:
+	<input type="radio" value="en-US" name="language" checked> English
+	<input type="radio" value="it-IT" name="language"> Italian
+	<input type="radio" value="de-DE" name="language"> German
+	<input type="radio" value="zh-CN" name="language"> Chinese <br>
+	<input type="submit" id="submit_options" name="submit_options">
+	</form>
+	<p>
+		Visit <a href="http://flip1.engr.oregonstate.edu:4432/example_1"> this page </a> to see
+		that your chatbox appearance/behavioral preferences were sucessfully saved.
+	</p>
+</section>
+
+
+
+
+
+
+<!-- begin olark code -->
+<script type="text/javascript" async> ;(function(o,l,a,r,k,y){if(o.olark)return; r="script";y=l.createElement(r);r=l.getElementsByTagName(r)[0]; y.async=1;y.src="//"+a;r.parentNode.insertBefore(y,r); y=o.olark=function(){k.s.push(arguments);k.t.push(+new Date)}; y.extend=function(i,j){y("extend",i,j)}; y.identify=function(i){y("identify",k.i=i)}; y.configure=function(i,j){y("configure",i,j);k.c[i]=j}; k=y._={s:[],t:[+new Date],c:{},l:a}; })(window,document,"static.olark.com/jsclient/loader.js");
+/* custom configuration goes here (www.olark.com/documentation) */
+
+if(localStorage.getItem("position"))
+{
+	olark.configure('system.hb_position', localStorage.getItem("position"));
+}
+if(localStorage.getItem("color"))
+{
+	olark.configure('system.hb_primary_color', localStorage.getItem("color"));
+}
+if(localStorage.getItem("language"))
+{
+	olark.configure('system.localization', localStorage.getItem("language"));
+}
+
+function bindSubmitButton () {
+	//Action should occur when submit button is clicked.
+	document.getElementById("submit_options").addEventListener('click', processForm
+		
+	);
+	
+	function processForm(event) {
+		event.preventDefault();
+	
+		//Get all the input checkboxes in the form.
+		var inputs = document.getElementsByTagName("input");
+		console.log(inputs);
+		
+		var p = "left";
+		var c = "#00ff00";
+		var l = "en-US";
+		
+		//If an input checkbox is checked, get its value,
+		for (var index = 0; index < inputs.length; index++)
+		{
+			console.log(inputs[index].value);
+			if(inputs[index].checked == true)
+			{
+			
+				var name = inputs[index].name;
+				if(name == "position")
+				{
+					p = inputs[index].value;
+				}
+				else if (name == "color")
+				{
+					c = inputs[index].value;
+				}
+				else if (name == "language")
+				{
+					l = inputs[index].value;
+				}
+				else
+				{
+					console.log("Something went wrong!");
+				}
+			}
+		}
+		
+		//Once the final position, color, and language are known,
+		//Use them to set the appropriate within local storage,
+		//and then reload the page so that the preferences
+		//can take effect.
+		localStorage.setItem("position", p);
+		localStorage.setItem("color", c);
+		localStorage.setItem("language", l);
+		
+		console.log(localStorage.getItem("language") + " is stored!");
+		window.location.reload(false);
+	}
+}
+bindSubmitButton();
+
+
+
+
+olark.identify('7210-924-10-3345');</script>
+<!-- end olark code -->
+
+
+
+

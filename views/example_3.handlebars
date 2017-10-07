@@ -1,0 +1,144 @@
+
+<div id="visitor_display" class="content">
+
+
+<h3>Open and close the chatbox. See what happens!</h3>
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- begin olark code -->
+<script type="text/javascript" async> ;(function(o,l,a,r,k,y){if(o.olark)return; r="script";y=l.createElement(r);r=l.getElementsByTagName(r)[0]; y.async=1;y.src="//"+a;r.parentNode.insertBefore(y,r); y=o.olark=function(){k.s.push(arguments);k.t.push(+new Date)}; y.extend=function(i,j){y("extend",i,j)}; y.identify=function(i){y("identify",k.i=i)}; y.configure=function(i,j){y("configure",i,j);k.c[i]=j}; k=y._={s:[],t:[+new Date],c:{},l:a}; })(window,document,"static.olark.com/jsclient/loader.js");
+/* custom configuration goes here (www.olark.com/documentation) */
+
+//load your settings for the chatbox.
+if(localStorage.getItem("position"))
+{
+	olark.configure('system.hb_position', localStorage.getItem("position"));
+}
+if(localStorage.getItem("color"))
+{
+	olark.configure('system.hb_primary_color', localStorage.getItem("color"));
+}
+if(localStorage.getItem("language"))
+{
+	olark.configure('system.localization', localStorage.getItem("language"));
+}
+
+//Make an empty Visitor object
+var Visitor = {};
+
+//Call to the server to set the Visitor's properties.
+olark('api.visitor.getDetails', function(details){
+		Visitor.city = details.city;
+		Visitor.region = details.region;
+		Visitor.country = details.country;
+		Visitor.visitCount = details.visitCount;
+		Visitor.secondsSpentAcrossAllVisits =  details.secondsSpentAcrossAllVisits;
+		Visitor.ip = details.ip;
+		Visitor.operatingSystem = details.operatingSystem;
+		Visitor.browser = details.browser;
+		
+		//Add some custom properties to the Visitor object.
+		Visitor.minutesSpentAcrossAllVisits = secondsToMinutes(Visitor.secondsSpentAcrossAllVisits);
+		Visitor.hoursSpentAcrossAllVisits = secondsToHours(Visitor.secondsSpentAcrossAllVisits);
+		
+		Visitor.returnDisplay = function() {
+			var table = document.createElement("table");
+			var caption = document.createElement("caption");
+			caption.textContent = "Visitor Information";
+			table.appendChild(caption);
+			
+			//Give table a header
+			var thead = document.createElement("thead");
+			table.appendChild(thead);
+
+			//Give header a row
+			var row = document.createElement("tr");
+			thead.appendChild(row);
+			
+			//Give header 2 header cells
+			var nameCell = document.createElement("th");
+			nameCell.textContent = "Name";
+			row.appendChild(nameCell);
+			
+			var valueCell = document.createElement("th");
+			valueCell.textContent = "Value";
+			row.appendChild(valueCell);
+			
+			//Give table a body.
+			var tbody = document.createElement("tbody");
+			table.appendChild(tbody);
+			
+			for(var p in this)
+			{
+				if(p != "returnDisplay")
+				{
+					var bodyRow = document.createElement("tr");
+					
+					var dataCell_1 = document.createElement("td");
+					dataCell_1.textContent = p;
+					bodyRow.appendChild(dataCell_1);
+					
+					var dataCell_2 = document.createElement("td");
+					dataCell_2.textContent = this[p];
+					console.log(this[p]);
+					bodyRow.appendChild(dataCell_2);
+					
+					tbody.append(bodyRow);
+				}
+			}
+			
+			//Give the table a border.
+			table.border = "1";
+			
+			return table;
+
+		};
+		
+		var table = Visitor.returnDisplay();
+		
+		var content = document.getElementById("visitor_display");
+		content.appendChild(table);
+		console.log(Visitor);
+});
+
+//Add some properties to the visitor, like functions for processing the data.
+
+
+
+function secondsToMinutes(seconds)
+{
+	return seconds / 60;
+}
+
+
+function secondsToHours(seconds)
+{
+	return seconds / 3600;
+}
+
+
+olark('api.box.onExpand', function() {
+	var content = document.getElementById("visitor_display");
+	console.log("hi");
+	content.style.display = "none";
+});
+
+olark('api.box.onShrink', function() {
+	var content = document.getElementById("visitor_display");
+	console.log("bye");
+	content.style.display = "block";
+});
+
+olark.identify('7210-924-10-3345');</script>
+<!-- end olark code -->
